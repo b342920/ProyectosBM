@@ -1,0 +1,496 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Mapa Mental Interactivo - Actualización Red Mercantil</title>
+    <script src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
+    <script src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
+    <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+        }
+        .gradient-bg {
+            background: linear-gradient(135deg, #f0f4ff 0%, #ffffff 50%, #f8f0ff 100%);
+        }
+        .connection-line {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            width: 8rem;
+            height: 1px;
+            background: linear-gradient(to right, #d1d5db, transparent);
+            transform: translate(-50%, -50%);
+            z-index: 0;
+        }
+        .hover-tooltip {
+            animation: fadeIn 0.2s ease-in-out;
+        }
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(-10px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+        .branch-card {
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+        .branch-card:hover {
+            transform: scale(1.02);
+        }
+        .concept-card {
+            transition: all 0.2s ease-in-out;
+        }
+        .concept-card:hover {
+            transform: translateY(-2px);
+        }
+    </style>
+</head>
+<body class="gradient-bg min-h-screen">
+    <div id="root"></div>
+
+    <script type="text/babel">
+        function App() {
+            const [selectedLevel, setSelectedLevel] = React.useState('todos');
+            const [hoveredNode, setHoveredNode] = React.useState(null);
+            const [selectedCategory, setSelectedCategory] = React.useState('todas');
+
+            const mindMap = {
+                "Contexto Inicial y Problemas": {
+                    color: "bg-red-500",
+                    lightColor: "bg-red-50",
+                    borderColor: "border-red-300",
+                    icon: "🚨",
+                    position: "top-right",
+                    concepts: [
+                        {
+                            id: "equipos-obsoletos",
+                            title: "70% Equipos Sin Soporte",
+                            level: "principiante",
+                            description: "La mayoría de equipos del Data Center ya no reciben actualizaciones ni soporte técnico.",
+                            details: "Riesgo crítico: como tener un coche sin repuestos ni mecánico disponible"
+                        },
+                        {
+                            id: "vulnerabilidades-seguridad",
+                            title: "Huecos de Seguridad",
+                            level: "intermedio",
+                            description: "Faltan firewalls en puntos críticos, creando vulnerabilidades en la red.",
+                            details: "Paredes con agujeros que permiten el paso libre de amenazas"
+                        },
+                        {
+                            id: "servicios-dispersos",
+                            title: "Servicios Mal Ubicados",
+                            level: "principiante",
+                            description: "Servicios críticos en Piso 11 en lugar del Data Center seguro (Piso 10).",
+                            details: "Órganos vitales fuera de la zona más protegida del banco"
+                        },
+                        {
+                            id: "inversion-desperdiciada",
+                            title: "Riesgo de Inversión $3.3M",
+                            level: "intermedio",
+                            description: "Gran inversión en equipos nuevos que debe aprovecharse correctamente.",
+                            details: "Oportunidad única para modernizar completamente la infraestructura"
+                        }
+                    ]
+                },
+                "Filosofía de Diseño de Red": {
+                    color: "bg-blue-500",
+                    lightColor: "bg-blue-50",
+                    borderColor: "border-blue-300",
+                    icon: "🎯",
+                    position: "top-left",
+                    concepts: [
+                        {
+                            id: "columna-vertebral",
+                            title: "Metáfora: Columna Vertebral",
+                            level: "principiante",
+                            description: "La red como estructura central que soporta todas las operaciones del banco.",
+                            details: "Sistema nervioso que permite el flujo de información vital"
+                        },
+                        {
+                            id: "zero-trust",
+                            title: "Filosofía Zero Trust",
+                            level: "avanzado",
+                            description: "No confiar en nada por defecto, verificar siempre identidad y permisos.",
+                            details: "Verificación constante sin importar ubicación dentro o fuera de la red"
+                        },
+                        {
+                            id: "segmentacion-zonas",
+                            title: "Segmentación en 4 Zonas",
+                            level: "intermedio",
+                            description: "División estratégica: Internet, Servicios, Usuarios Internos, Data Center.",
+                            details: "Como habitaciones separadas con puertas de seguridad controladas"
+                        },
+                        {
+                            id: "redundancia-principio",
+                            title: "Principio de Redundancia",
+                            level: "intermedio",
+                            description: "Duplicación de componentes críticos para evitar puntos únicos de falla.",
+                            details: "Si un componente falla, otro toma su lugar automáticamente"
+                        }
+                    ]
+                },
+                "Evolución de Topologías de Red": {
+                    color: "bg-yellow-500",
+                    lightColor: "bg-yellow-50",
+                    borderColor: "border-yellow-300",
+                    icon: "🔄",
+                    position: "bottom-left",
+                    concepts: [
+                        {
+                            id: "modelo-3-capas-antiguo",
+                            title: "Modelo 3 Capas (Antiguo)",
+                            level: "intermedio",
+                            description: "Diseño jerárquico: Acceso → Distribución → Núcleo, como pirámide de 3 pisos.",
+                            details: "Usuarios en base, control en medio, cerebro en la cima"
+                        },
+                        {
+                            id: "problema-sobresuscripcion",
+                            title: "Problema: Sobresuscripción",
+                            level: "avanzado",
+                            description: "Trancón cuando muchos usuarios (480 Mbps) usaban enlace lento (100 Mbps).",
+                            details: "Como muchos coches intentando pasar por un carril muy estrecho"
+                        },
+                        {
+                            id: "limitaciones-stp",
+                            title: "Limitaciones STP",
+                            level: "avanzado",
+                            description: "Spanning Tree Protocol desperdiciaba cables de respaldo, solo uno activo.",
+                            details: "Cables extra esperando sin poder sumar velocidad"
+                        },
+                        {
+                            id: "spine-leaf-moderno",
+                            title: "Spine-and-Leaf (Moderno)",
+                            level: "intermedio",
+                            description: "Cada 'hoja' conectada a TODAS las 'espinas' para máxima eficiencia.",
+                            details: "Múltiples caminos de datos, alta velocidad y redundancia natural"
+                        },
+                        {
+                            id: "port-channel-revolucion",
+                            title: "Revolución Port Channel",
+                            level: "avanzado",
+                            description: "Suma velocidades de múltiples cables creando 'autopistas' de datos.",
+                            details: "Elimina completamente el problema de sobresuscripción del pasado"
+                        }
+                    ]
+                },
+                "Propuesta de Diseño de Red (2025-2026)": {
+                    color: "bg-green-500",
+                    lightColor: "bg-green-50",
+                    borderColor: "border-green-300",
+                    icon: "🚀",
+                    position: "bottom-right",
+                    concepts: [
+                        {
+                            id: "aci-sistema-inteligente",
+                            title: "Sistema ACI Inteligente",
+                            level: "avanzado",
+                            description: "'Gran switch mágico' flexible que se adapta a cualquier necesidad.",
+                            details: "Gestión centralizada de toda la red como un solo dispositivo"
+                        },
+                        {
+                            id: "firewalls-virtualizados",
+                            title: "Firewalls Virtualizados 2026",
+                            level: "avanzado",
+                            description: "Soportan Port Channel y virtualización para máximo rendimiento.",
+                            details: "Un equipo físico funciona como múltiples firewalls lógicos"
+                        },
+                        {
+                            id: "gran-traslado-fisico",
+                            title: "El Gran Traslado",
+                            level: "principiante",
+                            description: "Mover servicios críticos del Piso 11 al Data Center seguro (Piso 10).",
+                            details: "Consolidar todos los 'órganos vitales' en la bóveda principal"
+                        },
+                        {
+                            id: "cableado-moderno",
+                            title: "Cableado de Nueva Generación",
+                            level: "intermedio",
+                            description: "QSFP MPO (100G), LC (10-25G), cables 'Hidra' que se dividen.",
+                            details: "Diferentes velocidades optimizadas para cada tipo de conexión"
+                        },
+                        {
+                            id: "redundancia-fisica",
+                            title: "Redundancia Física Total",
+                            level: "intermedio",
+                            description: "Equipos duplicados en gabinetes separados para continuidad operativa.",
+                            details: "Si un gabinete falla, el duplicado mantiene el servicio activo"
+                        },
+                        {
+                            id: "escalabilidad-modular",
+                            title: "Escalabilidad Modular",
+                            level: "intermedio",
+                            description: "Crecimiento fácil: añadir nuevas 'hojas' sin afectar la red existente.",
+                            details: "Diseño que crece orgánicamente con las necesidades del banco"
+                        }
+                    ]
+                }
+            };
+
+            const levels = [
+                { id: 'todos', name: 'Todos los Niveles', color: 'bg-gray-500', icon: '🎯' },
+                { id: 'principiante', name: 'Principiante', color: 'bg-green-500', icon: '🌱' },
+                { id: 'intermedio', name: 'Intermedio', color: 'bg-yellow-500', icon: '⚡' },
+                { id: 'avanzado', name: 'Avanzado', color: 'bg-red-500', icon: '🚀' }
+            ];
+
+            const categories = [
+                { id: 'todas', name: 'Todas las Ramas' },
+                ...Object.keys(mindMap).map(cat => ({ id: cat, name: cat }))
+            ];
+
+            const filteredConcepts = () => {
+                let result = {};
+
+                Object.keys(mindMap).forEach(category => {
+                    if (selectedCategory === 'todas' || selectedCategory === category) {
+                        const filteredConceptsInCategory = mindMap[category].concepts.filter(concept => 
+                            selectedLevel === 'todos' || concept.level === selectedLevel
+                        );
+
+                        if (filteredConceptsInCategory.length > 0) {
+                            result[category] = {
+                                ...mindMap[category],
+                                concepts: filteredConceptsInCategory
+                            };
+                        }
+                    }
+                });
+
+                return result;
+            };
+
+            const getLevelIcon = (level) => {
+                switch(level) {
+                    case 'principiante': return '🌱';
+                    case 'intermedio': return '⚡';
+                    case 'avanzado': return '🚀';
+                    default: return '📚';
+                }
+            };
+
+            const getLevelColor = (level) => {
+                switch(level) {
+                    case 'principiante': return 'bg-green-200 text-green-800';
+                    case 'intermedio': return 'bg-yellow-200 text-yellow-800';
+                    case 'avanzado': return 'bg-red-200 text-red-800';
+                    default: return 'bg-gray-200 text-gray-800';
+                }
+            };
+
+            const totalConcepts = Object.values(mindMap).reduce((sum, cat) => sum + cat.concepts.length, 0);
+            const filteredTotal = Object.values(filteredConcepts()).reduce((sum, cat) => sum + cat.concepts.length, 0);
+
+            const getBranchPosition = (position) => {
+                switch(position) {
+                    case 'top-right': return 'md:col-start-2 md:row-start-1';
+                    case 'top-left': return 'md:col-start-1 md:row-start-1';
+                    case 'bottom-left': return 'md:col-start-1 md:row-start-2';
+                    case 'bottom-right': return 'md:col-start-2 md:row-start-2';
+                    default: return '';
+                }
+            };
+
+            return (
+                <div className="min-h-screen p-6">
+                    <div className="max-w-7xl mx-auto">
+                        {/* Header */}
+                        <div className="text-center mb-8">
+                            <h1 className="text-4xl font-bold text-gray-800 mb-2">
+                                🧠 Mapa Mental Interactivo: Actualización Red Mercantil
+                            </h1>
+                            <p className="text-lg text-gray-600">
+                                Explora la estructura de conocimiento siguiendo el mapa mental de NotebookLM
+                            </p>
+                        </div>
+
+                        {/* Central Node */}
+                        <div className="flex justify-center mb-8">
+                            <div className="bg-gradient-to-r from-purple-500 to-indigo-600 text-white p-6 rounded-2xl shadow-2xl transform hover:scale-105 transition-all duration-300">
+                                <div className="text-center">
+                                    <div className="text-4xl mb-2">🏦</div>
+                                    <h2 className="text-2xl font-bold">Actualización de Red Mercantil</h2>
+                                    <p className="text-purple-100 mt-2">Nodo Central del Conocimiento</p>
+                                </div>
+                            </div>
+                        </div>
+
+                        {/* Filters */}
+                        <div className="bg-white rounded-xl shadow-lg p-6 mb-8">
+                            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                                {/* Level Filter */}
+                                <div>
+                                    <h3 className="text-lg font-semibold text-gray-700 mb-3">
+                                        📊 Filtrar por Nivel de Experiencia
+                                    </h3>
+                                    <div className="grid grid-cols-2 gap-2">
+                                        {levels.map(level => (
+                                            <button
+                                                key={level.id}
+                                                onClick={() => setSelectedLevel(level.id)}
+                                                className={`p-3 rounded-lg border-2 transition-all duration-200 ${
+                                                    selectedLevel === level.id
+                                                        ? `${level.color} text-white border-transparent shadow-lg transform scale-105`
+                                                        : 'bg-gray-50 border-gray-200 hover:bg-gray-100 text-gray-700'
+                                                }`}
+                                            >
+                                                <div className="flex items-center justify-center">
+                                                    <span className="text-xl mr-2">{level.icon}</span>
+                                                    <span className="font-medium text-sm">{level.name}</span>
+                                                </div>
+                                            </button>
+                                        ))}
+                                    </div>
+                                </div>
+
+                                {/* Category Filter */}
+                                <div>
+                                    <h3 className="text-lg font-semibold text-gray-700 mb-3">
+                                        🌿 Filtrar por Rama del Mapa Mental
+                                    </h3>
+                                    <select
+                                        value={selectedCategory}
+                                        onChange={(e) => setSelectedCategory(e.target.value)}
+                                        className="w-full p-3 border-2 border-gray-200 rounded-lg focus:border-blue-500 focus:outline-none"
+                                    >
+                                        {categories.map(cat => (
+                                            <option key={cat.id} value={cat.id}>{cat.name}</option>
+                                        ))}
+                                    </select>
+                                </div>
+                            </div>
+
+                            <div className="mt-4 text-center text-gray-600">
+                                Mostrando <span className="font-bold text-blue-600">{filteredTotal}</span> de <span className="font-bold">{totalConcepts}</span> conceptos
+                            </div>
+                        </div>
+
+                        {/* Mind Map Branches */}
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-8 mb-8">
+                            {Object.entries(filteredConcepts()).map(([branchName, branchData]) => (
+                                <div 
+                                    key={branchName} 
+                                    className={`${getBranchPosition(branchData.position)} relative`}
+                                >
+                                    {/* Connection Line to Center */}
+                                    <div className="hidden md:block connection-line"></div>
+
+                                    {/* Branch Container */}
+                                    <div className="bg-white rounded-xl shadow-lg overflow-hidden relative z-10 branch-card">
+                                        {/* Branch Header */}
+                                        <div className={`${branchData.color} text-white p-4`}>
+                                            <div className="flex items-center">
+                                                <span className="text-3xl mr-3">{branchData.icon}</span>
+                                                <div>
+                                                    <h2 className="text-xl font-bold">{branchName}</h2>
+                                                    <p className="text-white/90 text-sm">
+                                                        {branchData.concepts.length} concepto{branchData.concepts.length !== 1 ? 's' : ''}
+                                                    </p>
+                                                </div>
+                                            </div>
+                                        </div>
+
+                                        {/* Concepts */}
+                                        <div className="p-4">
+                                            <div className="space-y-3">
+                                                {branchData.concepts.map(concept => (
+                                                    <div
+                                                        key={concept.id}
+                                                        className={`relative p-3 rounded-lg border-2 ${branchData.borderColor} ${branchData.lightColor} 
+                                                            hover:shadow-md transition-all duration-200 cursor-pointer concept-card`}
+                                                        onMouseEnter={() => setHoveredNode(concept.id)}
+                                                        onMouseLeave={() => setHoveredNode(null)}
+                                                    >
+                                                        {/* Level Badge */}
+                                                        <div className={`absolute top-2 right-2 px-2 py-1 rounded-full text-xs font-semibold ${getLevelColor(concept.level)}`}>
+                                                            {getLevelIcon(concept.level)}
+                                                        </div>
+
+                                                        {/* Concept Title */}
+                                                        <h3 className="text-md font-bold text-gray-800 mb-1 pr-12">
+                                                            {concept.title}
+                                                        </h3>
+
+                                                        {/* Description */}
+                                                        <p className="text-gray-600 text-sm">
+                                                            {concept.description}
+                                                        </p>
+
+                                                        {/* Hover Details */}
+                                                        {hoveredNode === concept.id && (
+                                                            <div className="absolute z-20 top-full left-0 right-0 mt-2 p-3 bg-gray-800 text-white rounded-lg shadow-xl hover-tooltip">
+                                                                <div className="text-sm">
+                                                                    <strong>💡 Detalle:</strong> {concept.details}
+                                                                </div>
+                                                                <div className="absolute -top-2 left-4 w-4 h-4 bg-gray-800 transform rotate-45"></div>
+                                                            </div>
+                                                        )}
+                                                    </div>
+                                                ))}
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            ))}
+                        </div>
+
+                        {/* Legend */}
+                        <div className="bg-white rounded-xl shadow-lg p-6 mb-6">
+                            <h3 className="text-lg font-semibold text-gray-700 mb-4">🗺️ Guía del Mapa Mental</h3>
+                            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                                <div>
+                                    <h4 className="font-semibold text-gray-700 mb-2">Niveles de Experiencia:</h4>
+                                    <div className="space-y-2 text-sm">
+                                        <div className="flex items-center">
+                                            <span className="text-xl mr-2">🌱</span>
+                                            <span><strong>Principiante:</strong> Conceptos básicos y fundamentales</span>
+                                        </div>
+                                        <div className="flex items-center">
+                                            <span className="text-xl mr-2">⚡</span>
+                                            <span><strong>Intermedio:</strong> Requiere conocimiento previo</span>
+                                        </div>
+                                        <div className="flex items-center">
+                                            <span className="text-xl mr-2">🚀</span>
+                                            <span><strong>Avanzado:</strong> Conceptos técnicos especializados</span>
+                                        </div>
+                                    </div>
+                                </div>
+                                <div>
+                                    <h4 className="font-semibold text-gray-700 mb-2">Estructura del Mapa:</h4>
+                                    <div className="text-sm text-gray-600">
+                                        <p className="mb-2">• <strong>Nodo Central:</strong> Actualización de Red Mercantil</p>
+                                        <p className="mb-2">• <strong>4 Ramas Principales:</strong> Siguiendo el mapa de NotebookLM</p>
+                                        <p>• <strong>Interactividad:</strong> Hover para detalles adicionales</p>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        {/* Summary Stats */}
+                        <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+                            {Object.entries(mindMap).map(([branchName, branchData]) => (
+                                <div key={branchName} className={`p-4 rounded-lg ${branchData.lightColor} ${branchData.borderColor} border-2`}>
+                                    <div className="text-center">
+                                        <div className="text-2xl mb-1">{branchData.icon}</div>
+                                        <div className="font-semibold text-xs text-gray-700 mb-1">{branchName}</div>
+                                        <div className="text-lg font-bold text-gray-800">{branchData.concepts.length}</div>
+                                        <div className="text-xs text-gray-500">conceptos</div>
+                                    </div>
+                                </div>
+                            ))}
+                        </div>
+
+                        {/* Footer */}
+                        <div className="text-center mt-8 text-gray-500 text-sm">
+                            <p>© 2024 Mapa Mental Interactivo - Actualización Red Mercantil</p>
+                            <p className="mt-1">Desarrollado para facilitar el aprendizaje y comprensión de conceptos de redes</p>
+                        </div>
+                    </div>
+                </div>
+            );
+        }
+
+        ReactDOM.render(<App />, document.getElementById('root'));
+    </script>
+</body>
+</html>
